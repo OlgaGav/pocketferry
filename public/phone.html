@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6feb">
+<title>PocketFerry</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --text:#1b2430; --muted:#5a6676; --line:#dfe5ec; --accent:#1f6feb; --ok:#1a7f4b; --bad:#c0392b; --soft:#e8edf4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --card:#1b212a; --text:#e8edf3; --muted:#9aa7b6; --line:#2c3541; --accent:#4c8dff; --ok:#3fb97a; --bad:#ff7b6b; --soft:#232b36; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 20px 16px calc(28px + env(safe-area-inset-bottom)); }
+  main { max-width: 520px; margin: 0 auto; }
+  header { margin: 6px 4px 16px; }
+  h1 { font-size: 24px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .to { color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--soft); border-radius: 14px; padding: 5px; margin-bottom: 16px; }
+  .tabs button { border: 0; background: none; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--muted); padding: 12px 4px; border-radius: 10px; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(20, 30, 50, .14); }
+  .badge { display: inline-block; min-width: 22px; padding: 0 6px; margin-left: 6px; border-radius: 99px; background: var(--accent); color: #fff; font-size: 13px; line-height: 22px; }
+
+  .pick, .big { display: block; width: 100%; border: 0; border-radius: 16px; padding: 22px 18px;
+    background: var(--accent); color: #fff; font: inherit; font-weight: 650; font-size: 19px; text-align: center; cursor: pointer; }
+  .pick:active, .big:active { transform: scale(0.99); }
+  .more summary { display: inline-block; padding: 8px 10px; color: var(--accent); font-weight: 600; cursor: pointer; list-style: none; }
+  .more summary::-webkit-details-marker { display: none; }
+  .more summary::after { content: ' ▾'; }
+  .more[open] summary::after { content: ' ▴'; }
+  .more p { margin: 2px 0 6px; }
+  .hint { color: var(--muted); font-size: 14px; text-align: center; margin: 10px 8px 0; }
+  .summary { margin: 22px 0 10px; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+  .summary strong { display: block; font-size: 18px; }
+  .summary span { color: var(--muted); font-size: 14px; }
+  .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 12px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .2s; }
+  .done .bar i { background: var(--ok); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  #list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center;
+    padding: 12px 4px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  li .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li .s { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  li .m { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+  li.ok .s { color: var(--ok); } li.bad .s, li.bad .m { color: var(--bad); }
+  .retry { margin-top: 12px; width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font: inherit; font-weight: 600; }
+
+  /* files offered by the computer */
+  #offers li { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .thumb { width: 56px; height: 56px; border-radius: 10px; background: var(--soft); display: grid; place-items: center; overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .o-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+  .o-meta { color: var(--muted); font-size: 13px; }
+  .o-meta.ok { color: var(--ok); }
+  .acts { display: flex; gap: 8px; }
+  .save.open { color: var(--accent); }
+  .save { display: inline-block; padding: 10px 13px; border-radius: 11px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-weight: 600; font-size: 15px; text-decoration: none; }
+  .empty { text-align: center; color: var(--muted); padding: 36px 12px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>PocketFerry</h1>
+    <div class="to">connected to {{COMPUTER}}</div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Direction">
+    <button role="tab" id="tab-send" aria-controls="panel-send" aria-selected="true">Send to computer</button>
+    <button role="tab" id="tab-get" aria-controls="panel-get" aria-selected="false">Get from computer<span class="badge" id="badge" hidden></span></button>
+  </div>
+
+  <!-- phone to computer -->
+  <section id="panel-send" role="tabpanel" aria-labelledby="tab-send">
+    <label class="pick" id="pick" role="button" tabindex="0">
+      Choose photos &amp; videos
+      <input id="files" type="file" accept="image/*,video/*" multiple hidden>
+    </label>
+    <p class="hint" id="hint">Pick as many as you like. Keep this page open until they finish.</p>
+
+    <section class="summary" id="summary" hidden aria-live="polite">
+      <strong id="headline"></strong>
+      <span id="detail"></span>
+      <div class="bar"><i id="bar"></i></div>
+      <button class="retry" id="retry" hidden>Try the failed ones again</button>
+    </section>
+
+    <ul id="list"></ul>
+  </section>
+
+  <!-- computer to phone -->
+  <section id="panel-get" role="tabpanel" aria-labelledby="tab-get" hidden>
+    <button class="big" id="saveall" hidden>Save all to this phone</button>
+    <p class="hint" id="gethint" hidden>Files are saved in this phone's Downloads folder. If the browser asks whether to allow several downloads, choose Allow.</p>
+    <details class="hint more" id="sharehint" hidden>
+      <summary>How to share a photo or video</summary>
+      <p>Photo: tap Open, then press and hold the picture and choose Share.</p>
+      <p>Video: tap Save, open it from the browser's downloads, then share it from there.</p>
+    </details>
+    <ul id="offers"></ul>
+    <div class="empty" id="noffers">Nothing to get yet. On the computer, open "To phone" and add photos or videos. They appear here by themselves.</div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const code = location.pathname.split('/').filter(Boolean)[1];
+  const api = (name, rest = '') => `/api/${name}/${encodeURIComponent(code)}${rest}`;
+  const $ = (id) => document.getElementById(id);
+  const fmt = (b) => b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
+
+  // ---------- direction tabs ----------
+  let tab = 'send', choseTab = false;
+  function showTab(which) {
+    tab = which;
+    for (const t of ['send', 'get']) {
+      $('tab-' + t).setAttribute('aria-selected', String(t === which));
+      $('panel-' + t).hidden = t !== which;
+    }
+  }
+  $('tab-send').addEventListener('click', () => { choseTab = true; showTab('send'); });
+  $('tab-get').addEventListener('click', () => { choseTab = true; showTab('get'); });
+
+  // ---------- send to computer ----------
+  const input = $('files'), list = $('list'), pick = $('pick');
+  const queue = [];           // { file, el, state: waiting|sending|ok|skipped|bad, sent }
+  let running = false;
+
+  function addRow(item) {
+    const li = document.createElement('li');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = item.file.name;
+    const s = document.createElement('span'); s.className = 's'; s.textContent = 'Waiting';
+    const m = document.createElement('span'); m.className = 'm'; m.hidden = true;
+    li.append(n, s, m);
+    list.append(li);
+    item.el = { li, s, m };
+  }
+
+  function setRow(item, cls, status, message) {
+    item.el.li.className = cls;
+    item.el.s.textContent = status;
+    item.el.m.hidden = !message;
+    item.el.m.textContent = message || '';
+  }
+
+  function refresh() {
+    const total = queue.length;
+    const finished = queue.filter((q) => q.state === 'ok' || q.state === 'skipped').length;
+    const failed = queue.filter((q) => q.state === 'bad').length;
+    const bytesAll = queue.reduce((a, q) => a + q.file.size, 0) || 1;
+    const bytesDone = queue.reduce((a, q) => a + (q.state === 'waiting' || q.state === 'sending' ? q.sent : q.file.size), 0);
+    $('summary').hidden = total === 0;
+    $('bar').style.width = Math.round((bytesDone / bytesAll) * 100) + '%';
+    const allDone = !running && total > 0;
+    $('summary').classList.toggle('done', allDone && failed === 0);
+    if (!allDone) {
+      $('headline').textContent = `Sending ${Math.min(finished + failed + 1, total)} of ${total}…`;
+      $('detail').textContent = `${fmt(bytesDone)} of ${fmt(bytesAll)}`;
+    } else if (failed === 0) {
+      $('headline').textContent = `All done. ${finished} ${finished === 1 ? 'file is' : 'files are'} on the computer`;
+      $('detail').textContent = 'You can send more or close this page.';
+    } else {
+      $('headline').textContent = `${finished} sent, ${failed} not sent`;
+      $('detail').textContent = 'The reason is shown under each file below.';
+    }
+    $('retry').hidden = !(allDone && failed > 0);
+    pick.firstChild.textContent = total ? 'Choose more ' : 'Choose photos & videos ';
+    $('hint').hidden = total > 0;
+  }
+
+  function send(item) {
+    return new Promise((resolve) => {
+      const f = item.file;
+      const xhr = new XMLHttpRequest();
+      const qs = new URLSearchParams({ name: f.name, size: f.size, lm: f.lastModified || 0 });
+      xhr.open('POST', api('upload', '?' + qs));
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.upload.onprogress = (e) => {
+        item.sent = e.loaded;
+        setRow(item, '', Math.round((e.loaded / (f.size || 1)) * 100) + '%');
+        refresh();
+      };
+      const finish = (ok, message) => {
+        item.state = ok ? 'ok' : 'bad';
+        setRow(item, ok ? 'ok' : 'bad', ok ? 'Sent ✓' : 'Not sent', ok ? '' : message);
+        resolve();
+      };
+      xhr.onload = () => {
+        let body = {};
+        try { body = JSON.parse(xhr.responseText); } catch {}
+        if (xhr.status === 200) finish(true);
+        else finish(false, body.error || 'The computer did not accept this file.');
+      };
+      xhr.onerror = xhr.onabort = () => finish(false, 'Connection lost. Is the phone on the same Wi-Fi?');
+      xhr.send(f);
+    });
+  }
+
+  async function run() {
+    if (running) return;
+    running = true;
+    for (;;) {
+      const item = queue.find((q) => q.state === 'waiting');
+      if (!item) break;
+      item.state = 'sending';
+      setRow(item, '', 'Starting…');
+      refresh();
+      try {
+        const qs = new URLSearchParams({ name: item.file.name, size: item.file.size });
+        const r = await fetch(api('exists', '?' + qs));
+        if (r.status === 403) { item.state = 'bad'; setRow(item, 'bad', 'Not sent', 'This link has expired. Scan the QR code on the computer again.'); continue; }
+        if ((await r.json()).exists) { item.state = 'skipped'; setRow(item, 'ok', 'Already there ✓'); continue; }
+      } catch { /* the upload below reports connection problems */ }
+      await send(item);
+    }
+    running = false;
+    refresh();
+  }
+
+  input.addEventListener('change', () => {
+    for (const file of input.files) {
+      const item = { file, state: 'waiting', sent: 0 };
+      queue.push(item);
+      addRow(item);
+    }
+    input.value = '';
+    refresh();
+    run();
+  });
+
+  pick.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+
+  $('retry').addEventListener('click', () => {
+    for (const q of queue) if (q.state === 'bad') { q.state = 'waiting'; q.sent = 0; setRow(q, '', 'Waiting'); }
+    refresh();
+    run();
+  });
+
+  // Warn before leaving in the middle of a transfer.
+  addEventListener('beforeunload', (e) => { if (running) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ---------- get from computer ----------
+  const offers = new Map();   // id -> { li, meta, link, started }
+  function renderOffers(files) {
+    const ids = new Set(files.map((f) => f.id));
+    for (const [id, o] of offers) if (!ids.has(id)) { o.li.remove(); offers.delete(id); }
+    for (const f of files) {
+      if (offers.has(f.id)) continue;
+      const li = document.createElement('li');
+      const thumb = document.createElement('div'); thumb.className = 'thumb'; thumb.textContent = f.kind === 'video' ? 'VIDEO' : 'PHOTO';
+      if (f.preview) {
+        const img = new Image();
+        img.alt = ''; img.decoding = 'async';
+        img.onload = () => thumb.replaceChildren(img);
+        img.src = api('get', '/' + encodeURIComponent(f.id) + '?inline=1');
+      }
+      const mid = document.createElement('div'); mid.style.minWidth = 0;
+      const name = document.createElement('div'); name.className = 'o-name'; name.textContent = f.name;
+      const meta = document.createElement('div'); meta.className = 'o-meta'; meta.textContent = fmt(f.size);
+      mid.append(name, meta);
+      const link = document.createElement('a');
+      link.className = 'save'; link.textContent = 'Save';
+      link.href = api('get', '/' + encodeURIComponent(f.id));
+      link.download = f.name;
+      link.setAttribute('aria-label', 'Save ' + f.name + ' to this phone');
+      const o = { li, meta, link, size: f.size, started: false };
+      link.addEventListener('click', () => {
+        o.started = true;
+        meta.className = 'o-meta ok';
+        meta.textContent = fmt(f.size) + ' · download started';
+        link.textContent = 'Save again';
+        updateSaveAll();
+      });
+      const acts = document.createElement('div'); acts.className = 'acts';
+      if (f.openable) {
+        // Opens the photo or video in a new tab. From there the browser's own menu
+        // (press and hold the picture) offers "Share image".
+        const open = document.createElement('a');
+        open.className = 'save open'; open.textContent = 'Open';
+        open.href = api('get', '/' + encodeURIComponent(f.id) + '?open=1');
+        open.target = '_blank'; open.rel = 'noopener';
+        open.setAttribute('aria-label', 'Open ' + f.name);
+        acts.append(open);
+      }
+      acts.append(link);
+      li.append(thumb, mid, acts);
+      $('offers').append(li);
+      offers.set(f.id, o);
+    }
+    const n = files.length;
+    $('noffers').hidden = n > 0;
+    $('gethint').hidden = n === 0;
+    $('sharehint').hidden = n === 0;
+    $('badge').hidden = n === 0;
+    $('badge').textContent = n;
+    updateSaveAll();
+    // First visit with files waiting: open the "get" side unless the person already chose.
+    if (n > 0 && !choseTab && queue.length === 0 && tab === 'send') showTab('get');
+  }
+
+  function updateSaveAll() {
+    const left = [...offers.values()].filter((o) => !o.started);
+    const btn = $('saveall');
+    btn.hidden = offers.size < 2;
+    if (left.length === 0) btn.textContent = 'Save all again';
+    else {
+      const bytes = left.reduce((a, o) => a + o.size, 0);
+      btn.textContent = left.length === offers.size ? `Save all ${left.length} to this phone (${fmt(bytes)})` : `Save the other ${left.length} (${fmt(bytes)})`;
+    }
+  }
+
+  $('saveall').addEventListener('click', async () => {
+    let todo = [...offers.values()].filter((o) => !o.started);
+    if (!todo.length) todo = [...offers.values()];
+    // Browsers drop downloads that start at the same instant, so start them one by one.
+    for (const o of todo) {
+      o.link.click();
+      await new Promise((r) => setTimeout(r, 700));
+    }
+  });
+
+  async function poll() {
+    if (document.hidden) return;
+    try {
+      const r = await fetch(api('outbox'), { cache: 'no-store' });
+      if (r.ok) renderOffers((await r.json()).files);
+    } catch { /* computer unreachable for a moment: keep what is shown */ }
+  }
+  poll();
+  setInterval(poll, 3000);
+  document.addEventListener('visibilitychange', poll);
+})();
+</script>
+</body>
+</html>

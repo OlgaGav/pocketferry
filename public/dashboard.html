@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PocketFerry</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --text:#1b2430; --muted:#5a6676; --line:#dfe5ec; --accent:#1f6feb; --ok:#1a7f4b; --bad:#c0392b; --soft:#eef2f7; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --card:#1b212a; --text:#e8edf3; --muted:#9aa7b6; --line:#2c3541; --accent:#4c8dff; --ok:#3fb97a; --bad:#ff7b6b; --soft:#232b36; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 24px; display: grid; grid-template-columns: 340px 1fr; gap: 24px; min-height: 100%; }
+  @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; margin: 0; }
+  .muted { color: var(--muted); }
+  .qr { background: #fff; border-radius: 12px; padding: 10px; margin: 16px 0; border: 1px solid var(--line); aspect-ratio: 1; display: grid; place-items: center; }
+  .qr img { width: 100%; height: 100%; display: block; }
+  ol { margin: 0; padding-left: 20px; }
+  ol li { margin: 4px 0; }
+  .link { margin-top: 14px; font-size: 13px; }
+  .link code { display: block; margin-top: 4px; padding: 8px 10px; background: var(--soft); border-radius: 8px; overflow-wrap: anywhere; user-select: all; font-size: 12.5px; }
+  select, input[type=text] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; }
+  button { font: inherit; padding: 8px 14px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; font-weight: 550; }
+  button:hover { background: var(--soft); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.07); background: var(--accent); }
+  button.quiet { border: 0; padding: 0; background: none; color: var(--accent); font-weight: 500; font-size: 13px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  /* direction switch */
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--soft); border-radius: 13px; padding: 5px; }
+  .tabs button { border: 0; background: none; padding: 10px 12px; border-radius: 9px; color: var(--muted); font-weight: 600; }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(20, 30, 50, .12); }
+  .tabs .count { font-weight: 500; color: var(--muted); margin-left: 4px; }
+  .panel { display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
+
+  .folder { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .folder .path { font-weight: 600; overflow-wrap: anywhere; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .manual { margin-top: 12px; display: flex; gap: 8px; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; gap: 12px; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .thumb { width: 48px; height: 48px; border-radius: 8px; background: var(--soft); display: grid; place-items: center; overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fmeta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .status { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: 12px; }
+  .status.ok, .status .ok { color: var(--ok); } .status.bad { color: var(--bad); }
+  .mini { height: 4px; background: var(--line); border-radius: 9px; overflow: hidden; margin-top: 5px; }
+  .mini i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+  .drop { border: 2px dashed var(--line); border-radius: 14px; padding: 22px 16px; text-align: center; }
+  .drop.over { border-color: var(--accent); background: var(--soft); }
+  .drop p { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+  .warn { background: var(--soft); border-radius: 10px; padding: 12px; margin-top: 14px; font-size: 14px; }
+  .err { color: var(--bad); font-size: 13px; margin-top: 8px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="card">
+    <h1>PocketFerry</h1>
+    <div class="muted">Move photos and videos between your phone and this computer, in either direction.</div>
+
+    <div id="online">
+      <div class="qr"><img id="qr" alt="QR code that opens the PocketFerry page on your phone"></div>
+      <ol>
+        <li>Connect the phone to the <strong>same Wi-Fi</strong> as this computer.</li>
+        <li>Open the phone's <strong>camera</strong> and point it at the code.</li>
+        <li>Tap the link. Send photos to this computer, or save the ones you offer here.</li>
+      </ol>
+      <div id="netpick" class="link" hidden>
+        <label for="net" class="muted">Phone can't open the page? Try another network:</label>
+        <select id="net"></select>
+      </div>
+      <div class="link">
+        <span class="muted">Or type this address in the phone's browser:</span>
+        <code id="url"></code>
+        <button class="quiet" id="newcode" title="Stops the old code and link from working">Make a new code</button>
+      </div>
+    </div>
+
+    <div id="offline" class="warn" hidden>
+      <strong>This computer isn't connected to a network.</strong><br>
+      Connect it to Wi-Fi and the QR code will appear here.
+    </div>
+  </aside>
+
+  <div class="right">
+    <div class="tabs" role="tablist" aria-label="Direction">
+      <button role="tab" id="tab-in" aria-controls="panel-in" aria-selected="true">From phone<span class="count" id="count-in"></span></button>
+      <button role="tab" id="tab-out" aria-controls="panel-out" aria-selected="false">To phone<span class="count" id="count-out"></span></button>
+    </div>
+
+    <!-- phone to computer -->
+    <div class="panel" id="panel-in" role="tabpanel" aria-labelledby="tab-in">
+      <section class="card">
+        <div class="folder">
+          <div style="min-width:0">
+            <div class="muted">Files from the phone are saved in</div>
+            <div class="path" id="dest"></div>
+          </div>
+          <div class="row">
+            <button id="open">Open folder</button>
+            <button id="change">Change…</button>
+          </div>
+        </div>
+        <form class="manual" id="manual" hidden>
+          <input type="text" id="path" aria-label="Full path of the folder" placeholder="Full path of the folder, e.g. /Users/me/Pictures/Phone">
+          <button class="primary">Save</button>
+        </form>
+        <div class="err" id="err" hidden></div>
+      </section>
+
+      <section class="card" style="flex:1">
+        <div class="head">
+          <h2>Received</h2>
+          <span class="muted" id="count"></span>
+        </div>
+        <ul class="list" id="files"></ul>
+        <div class="empty" id="empty">Nothing yet. Files appear here as your phone sends them.</div>
+      </section>
+    </div>
+
+    <!-- computer to phone -->
+    <div class="panel" id="panel-out" role="tabpanel" aria-labelledby="tab-out" hidden>
+      <section class="card">
+        <div class="drop" id="drop">
+          <button class="primary" id="add">Add photos &amp; videos…</button>
+          <p id="drophint">or drag them here. They stay on this computer; the phone saves a copy.</p>
+        </div>
+        <form class="manual" id="outmanual" hidden>
+          <input type="text" id="outpath" aria-label="Full path of a file or folder" placeholder="Full path of a photo, video or folder">
+          <button class="primary">Add</button>
+        </form>
+        <div class="err" id="outerr" hidden></div>
+      </section>
+
+      <section class="card" style="flex:1">
+        <div class="head">
+          <h2>Ready for the phone</h2>
+          <span class="row" style="align-items:baseline">
+            <span class="muted" id="outcount"></span>
+            <button class="quiet" id="clear" hidden>Clear list</button>
+          </span>
+        </div>
+        <ul class="list" id="outfiles"></ul>
+        <div class="empty" id="outempty">Nothing here yet. Add photos or videos, then scan the code with the phone and choose "Get from computer".</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const rows = new Map();
+  const bridge = window.pocketferry; // present in the desktop app only
+  let st = null, netIndex = 0, saved = 0, savedBytes = 0;
+
+  const fmt = (b) => b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
+  const post = (path, body) => fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-PocketFerry': '1' },
+    body: JSON.stringify(body || {}),
+  }).then((r) => r.json());
+
+  // ---------- direction tabs ----------
+  function showTab(which) {
+    for (const t of ['in', 'out']) {
+      $('tab-' + t).setAttribute('aria-selected', String(t === which));
+      $('panel-' + t).hidden = t !== which;
+    }
+    try { sessionStorage.setItem('tab', which); } catch {}
+  }
+  $('tab-in').addEventListener('click', () => showTab('in'));
+  $('tab-out').addEventListener('click', () => showTab('out'));
+  try { if (sessionStorage.getItem('tab') === 'out') showTab('out'); } catch {}
+
+  // ---------- shared state ----------
+  function showState(s) {
+    st = s;
+    $('dest').textContent = s.dest;
+    renderOutbox(s.outbox || []);
+    const has = s.urls.length > 0;
+    $('online').hidden = !has;
+    $('offline').hidden = has;
+    if (!has) return;
+    if (netIndex >= s.urls.length) netIndex = 0;
+    $('netpick').hidden = s.urls.length < 2;
+    const sel = $('net');
+    sel.replaceChildren(...s.urls.map((u, i) => new Option(`${u.name} — ${u.address}`, i, false, i === netIndex)));
+    $('url').textContent = s.urls[netIndex].url;
+    $('qr').src = `/api/qr.svg?i=${netIndex}&t=${encodeURIComponent(s.urls[netIndex].url)}`;
+  }
+
+  function makeRow(name, kind) {
+    const li = document.createElement('li');
+    const thumb = document.createElement('div'); thumb.className = 'thumb'; thumb.textContent = kind === 'video' ? 'VIDEO' : 'PHOTO';
+    const mid = document.createElement('div'); mid.style.minWidth = 0;
+    const fname = document.createElement('div'); fname.className = 'fname'; fname.textContent = name; fname.title = name;
+    const meta = document.createElement('div'); meta.className = 'fmeta';
+    mid.append(fname, meta);
+    const status = document.createElement('div'); status.className = 'status';
+    li.append(thumb, mid, status);
+    return { li, thumb, mid, fname, meta, status };
+  }
+  function loadThumb(r, src) {
+    const img = new Image();
+    img.alt = '';
+    img.onload = () => r.thumb.replaceChildren(img);
+    img.src = src;
+  }
+
+  // ---------- from phone ----------
+  function row(id, name, kind) {
+    let r = rows.get(id);
+    if (r) return r;
+    r = makeRow(name, kind);
+    r.mini = document.createElement('div'); r.mini.className = 'mini';
+    r.bar = document.createElement('i'); r.mini.append(r.bar);
+    r.mid.append(r.mini);
+    $('files').prepend(r.li);
+    $('empty').hidden = true;
+    rows.set(id, r);
+    return r;
+  }
+
+  function showSaved(item) {
+    const r = row(item.id, item.name, item.kind);
+    r.fname.textContent = item.name;
+    r.meta.textContent = fmt(item.size);
+    r.mini.hidden = true;
+    r.status.className = 'status ok';
+    r.status.textContent = 'Saved ✓';
+    if (item.preview) loadThumb(r, '/api/file/' + encodeURIComponent(item.name));
+    saved++; savedBytes += item.size;
+    $('count').textContent = `${saved} ${saved === 1 ? 'file' : 'files'} · ${fmt(savedBytes)}`;
+    $('count-in').textContent = `(${saved})`;
+  }
+
+  // ---------- to phone ----------
+  const outRows = new Map();
+  function renderOutbox(list) {
+    const ids = new Set(list.map((f) => f.id));
+    for (const [id, r] of outRows) if (!ids.has(id)) { r.li.remove(); outRows.delete(id); }
+    for (const f of list) {
+      let r = outRows.get(f.id);
+      if (!r) {
+        r = makeRow(f.name, f.kind);
+        r.meta.textContent = fmt(f.size);
+        r.state = document.createElement('span');
+        const rm = document.createElement('button');
+        rm.className = 'quiet'; rm.textContent = 'Remove';
+        rm.setAttribute('aria-label', 'Remove ' + f.name + ' from the list');
+        rm.addEventListener('click', () => post('/api/outbox/remove', { id: f.id }));
+        r.status.append(r.state, rm);
+        if (f.preview) loadThumb(r, '/api/out-thumb/' + encodeURIComponent(f.id));
+        $('outfiles').append(r.li);
+        outRows.set(f.id, r);
+      }
+      r.state.className = f.sent ? 'ok' : '';
+      r.state.textContent = f.sent ? (f.sent > 1 ? `Saved to phone ✓ ×${f.sent}` : 'Saved to phone ✓') : 'Waiting for the phone';
+    }
+    const bytes = list.reduce((a, f) => a + f.size, 0);
+    const done = list.filter((f) => f.sent).length;
+    $('outempty').hidden = list.length > 0;
+    $('clear').hidden = list.length === 0;
+    $('outcount').textContent = list.length ? `${list.length} ${list.length === 1 ? 'file' : 'files'} · ${fmt(bytes)}${done ? ` · ${done} saved to phone` : ''}` : '';
+    $('count-out').textContent = list.length ? `(${list.length})` : '';
+  }
+
+  const outFail = (msg) => { $('outerr').textContent = msg || ''; $('outerr').hidden = !msg; };
+  async function addPaths(paths) {
+    outFail('');
+    const r = await post('/api/outbox/add', paths ? { paths } : {});
+    if (r.error) return outFail(r.error);
+    if (r.cancelled) return;
+    if (!r.added && r.skipped) outFail('Nothing was added. PocketFerry sends photos and videos only.');
+    else if (r.skipped) outFail(`${r.skipped} ${r.skipped === 1 ? 'item was' : 'items were'} skipped: only photos and videos can be sent.`);
+  }
+  $('add').addEventListener('click', () => {
+    if (st && st.canPickFiles) return addPaths(null);
+    $('outmanual').hidden = false;
+    $('outpath').focus();
+  });
+  $('outmanual').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const v = $('outpath').value.trim();
+    if (!v) return;
+    await addPaths([v]);
+    $('outpath').value = '';
+  });
+  $('clear').addEventListener('click', () => post('/api/outbox/clear'));
+
+  const drop = $('drop');
+  if (!(bridge && bridge.pathFor)) $('drophint').textContent = 'They stay on this computer; the phone saves a copy.';
+  for (const ev of ['dragenter', 'dragover']) {
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); });
+  }
+  for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, () => drop.classList.remove('over'));
+  // Never let a dropped file replace the app's page.
+  addEventListener('dragover', (e) => e.preventDefault());
+  addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+    showTab('out');
+    if (!(bridge && bridge.pathFor)) {
+      $('outmanual').hidden = false;
+      return outFail('Dragging files works in the desktop app. Here, type the full path of a file or folder.');
+    }
+    const paths = [...e.dataTransfer.files].map((f) => bridge.pathFor(f)).filter(Boolean);
+    if (paths.length) addPaths(paths);
+  });
+
+  // ---------- live updates ----------
+  const es = new EventSource('/api/events');
+  let first = true;
+  es.addEventListener('state', (e) => {
+    const s = JSON.parse(e.data);
+    showState(s);
+    if (first) { first = false; [...s.recent].reverse().forEach(showSaved); }
+  });
+  es.addEventListener('start', (e) => {
+    const d = JSON.parse(e.data);
+    const r = row(d.id, d.name, d.kind);
+    r.meta.textContent = fmt(d.size || 0);
+    r.status.textContent = 'Receiving…';
+  });
+  es.addEventListener('progress', (e) => {
+    const d = JSON.parse(e.data);
+    const r = rows.get(d.id);
+    if (!r || !d.size) return;
+    const pct = Math.round((d.received / d.size) * 100);
+    r.bar.style.width = pct + '%';
+    r.status.textContent = pct + '%';
+  });
+  es.addEventListener('saved', (e) => showSaved(JSON.parse(e.data)));
+  es.addEventListener('failed', (e) => {
+    const r = rows.get(JSON.parse(e.data).id);
+    if (!r) return;
+    r.mini.hidden = true;
+    r.status.className = 'status bad';
+    r.status.textContent = 'Interrupted';
+  });
+
+  $('net').addEventListener('change', (e) => { netIndex = Number(e.target.value); showState(st); });
+  $('open').addEventListener('click', () => post('/api/open-folder'));
+  $('newcode').addEventListener('click', () => post('/api/new-code'));
+
+  const fail = (msg) => { $('err').textContent = msg || ''; $('err').hidden = !msg; };
+  $('change').addEventListener('click', async () => {
+    fail('');
+    if (st && st.canPickFolder) {
+      const r = await post('/api/folder');
+      if (r.error) fail(r.error);
+    } else {
+      $('manual').hidden = !$('manual').hidden;
+      $('path').value = st ? st.dest : '';
+      $('path').focus();
+    }
+  });
+  $('manual').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const r = await post('/api/folder', { path: $('path').value.trim() });
+    if (r.error) return fail(r.error);
+    fail('');
+    $('manual').hidden = true;
+  });
+})();
+</script>
+</body>
+</html>

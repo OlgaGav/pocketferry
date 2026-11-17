@@ -1,0 +1,43 @@
+{
+  "name": "pocketferry",
+  "productName": "PocketFerry",
+  "version": "1.0.0",
+  "description": "Move photos and videos between a phone and a computer over Wi-Fi, in either direction. Scan a QR code, pick files, done.",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "web": "node cli.js",
+    "test": "node test/smoke.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "app.pocketferry.desktop",
+    "productName": "PocketFerry",
+    "files": [
+      "main.js",
+      "preload.js",
+      "server.js",
+      "public/**/*"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.photography"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
+    }
+  }
+}
