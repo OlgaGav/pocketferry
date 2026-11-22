@@ -323,8 +323,12 @@ async function start(opts = {}) {
       if (settled) return;
       settled = true;
       req.unpipe(out);
+      // Delete only once the file is closed: Windows cannot remove a file that is still open,
+      // and a file still being opened would be created after the delete.
+      const discard = () => fsp.rm(tmp, { force: true }).catch(() => {});
+      if (out.closed) discard();
+      else out.once('close', discard);
       out.destroy();
-      fsp.rm(tmp, { force: true }).catch(() => {});
       emit('failed', { id, name });
       if (!res.headersSent && !res.destroyed) json(res, status, { error: message });
       req.resume();
