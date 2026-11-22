@@ -1,0 +1,44 @@
+# Builds the installers on macOS, Windows and Linux, and keeps them as downloads on the run's page.
+name: Build installers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: End-to-end checks
+        run: npm test
+
+      - name: Build installer
+        run: npx electron-builder --publish never
+        env:
+          # No signing certificates yet: build unsigned instead of searching for one.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PocketFerry-${{ runner.os }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.AppImage
+          if-no-files-found: error

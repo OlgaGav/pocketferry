@@ -10,7 +10,8 @@ dist/
 
 # Build output
 dist/
-build/
+build/*
+!build/icon.png
 
 # System files
 .DS_Store
